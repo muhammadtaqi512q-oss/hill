@@ -1,4 +1,4 @@
-name: Build Clean APK with Icon
+name: Build Clean APK with Icon and Splash Screen
 
 on:
   push:
@@ -38,17 +38,27 @@ jobs:
           cp -r index.html app/www/ 2>/dev/null || true
           cp -r characters gun bg stage app/www/ 2>/dev/null || true
           
-          # 3. Add Custom Icon if present
+          # 3. Add Custom Icon and Splash Screen if icon.png exists
           if [ -f "icon.png" ]; then
             cp icon.png app/www/icon.png
+            
+            # App Icon Configuration
             sed -i '/<\/widget>/i \    <icon src="www/icon.png" \/>' app/config.xml
+            
+            # Splash Screen Configuration (using icon.png)
+            sed -i '/<\/widget>/i \    <preference name="SplashScreen" value="screen" \/>' app/config.xml
+            sed -i '/<\/widget>/i \    <preference name="SplashScreenDelay" value="3000" \/>' app/config.xml
+            sed -i '/<\/widget>/i \    <preference name="AutoHideSplashScreen" value="true" \/>' app/config.xml
+            sed -i '/<\/widget>/i \    <preference name="SplashShowOnlyFirstTime" value="false" \/>' app/config.xml
+            sed -i '/<\/widget>/i \    <splash src="www/icon.png" \/>' app/config.xml
           fi
           
-          # 4. Set Landscape Orientation in config.xml
+          # 4. Force Landscape Orientation
           sed -i '/<\/widget>/i \    <preference name="Orientation" value="landscape" \/>' app/config.xml
 
-          # 5. Add Android Platform & Build
+          # 5. Add Plugins, Android Platform & Build
           cd app
+          cordova plugin add cordova-plugin-splashscreen
           cordova platform add android
           
           # Fix Gradle executable permissions

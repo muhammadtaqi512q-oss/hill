@@ -1,4 +1,4 @@
-name: Build Clean APK with Icon and Splash Screen
+name: Build Clean APK with Icon & Media Permissions
 
 on:
   push:
@@ -19,57 +19,46 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
 
-      - name: Build Cordova APK
+      - name: Install Cordova & Plugins
         run: |
           npm install -g cordova
           
           # 1. Create Cordova project
           cordova create app com.lumina.nexura "LUMINA"
           
-          # 2. Copy Web Source Assets
-          cp -r index.html app/www/ 2>/dev/null || true
-          cp -r characters gun bg stage app/www/ 2>/dev/null || true
+          # 2. Copy ALL HTML, CSS, JS and media files to www folder
+          cp -r *.html *.png *.jpg *.jpeg *.css *.js app/www/ 2>/dev/null || true
           
-          # 3. Add Custom Icon and Splash Screen if icon.png exists
+          # 3. Add Custom Icon to Config if icon.png exists
           if [ -f "icon.png" ]; then
             cp icon.png app/www/icon.png
-            
-            # App Icon Configuration
-            sed -i '/<\/widget>/i \    <icon src="www/icon.png" \/>' app/config.xml
-            
-            # Splash Screen Configuration (using icon.png)
-            sed -i '/<\/widget>/i \    <preference name="SplashScreen" value="screen" \/>' app/config.xml
-            sed -i '/<\/widget>/i \    <preference name="SplashScreenDelay" value="3000" \/>' app/config.xml
-            sed -i '/<\/widget>/i \    <preference name="AutoHideSplashScreen" value="true" \/>' app/config.xml
-            sed -i '/<\/widget>/i \    <preference name="SplashShowOnlyFirstTime" value="false" \/>' app/config.xml
-            sed -i '/<\/widget>/i \    <splash src="www/icon.png" \/>' app/config.xml
+            sed -i '/<\/widget>/i \    <icon src="www/icon.png" />' app/config.xml
           fi
-          
-          # 4. Force Landscape Orientation
-          sed -i '/<\/widget>/i \    <preference name="Orientation" value="landscape" \/>' app/config.xml
 
-          # 5. Add Plugins, Android Platform & Build
           cd app
-          cordova plugin add cordova-plugin-splashscreen
+          
+          # 4. Add Android Platform
           cordova platform add android
           
-          # Fix Gradle executable permissions
-          if [ -d "platforms/android" ]; then
-            chmod +x platforms/android/gradlew || true
-          fi
-
+          # 5. Add Required Cordova Plugins for Voice/Video & Permissions
+          cordova plugin add cordova-plugin-media
+          cordova plugin add cordova-plugin-media-capture
+          cordova plugin add cordova-plugin-camera
+          cordova plugin add cordova-plugin-android-permissions
+          
+          # Inject Camera and Microphone Permissions into AndroidManifest.xml
+          sed -i '/<\/manifest>/i \    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n    <uses-permission android:name="android.permission.RECORD_VIDEO" />' platforms/android/app/src/main/AndroidManifest.xml
+          
+          # 6. Build APK
           cordova build android --debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: HILL-CLIMB-APK
+          name: VIBE-APP-APK
           path: app/platforms/android/app/build/outputs/apk/debug/app-debug.apk
